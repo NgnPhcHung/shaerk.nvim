@@ -1,0 +1,12 @@
+describe("shaerk", function()
+  it("loads", function()
+    local shaerk = require("shaerk")
+    assert.are.equal("0.1.0", shaerk.VERSION)
+  end)
+
+  it("helpers create a buffer", function()
+    local helpers = require("tests.helpers")
+    local buf = helpers.buf({ "local x = 1" }, "lua")
+    assert.are.same({ "local x = 1" }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+  end)
+end)

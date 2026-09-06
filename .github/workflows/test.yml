@@ -1,0 +1,39 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # nightly breaks for upstream reasons, not ours
+    continue-on-error: ${{ matrix.nvim == 'nightly' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        nvim: [v0.10.0, stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: nvim-lua/plenary.nvim
+          path: .deps/plenary.nvim
+
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim }}
+
+      # PlenaryBustedDirectory spawns one headless nvim per spec file; a hung
+      # child would otherwise hold the runner for the 6h job default.
+      - run: make test
+        timeout-minutes: 5
+        env:
+          PLENARY_PATH: ${{ github.workspace }}/.deps/plenary.nvim
