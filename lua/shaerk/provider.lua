@@ -9,12 +9,14 @@ M.claude = {
   --- @param _tmp string
   --- @return string[]
   cmd = function(query, _tmp)
+    -- query goes before --allowedTools: it is variadic (<tools...>) and would
+    -- otherwise swallow the prompt, leaving claude with no input under --print.
     return {
       "claude",
       "-p",
+      query,
       "--allowedTools",
       "Read,Grep,Glob,Write",
-      query,
     }
   end,
 }

@@ -249,5 +249,10 @@ describe("provider.claude", function()
     assert.are.equal("claude", cmd[1])
     assert.is_truthy(vim.tbl_contains(cmd, "my query"))
     assert.is_truthy(vim.tbl_contains(cmd, "-p"))
+    -- --allowedTools is variadic: anything after it is eaten as a tool name,
+    -- so the query must come first or claude gets no prompt at all.
+    local qi = vim.fn.index(cmd, "my query")
+    local ti = vim.fn.index(cmd, "--allowedTools")
+    assert.is_true(ti >= 0 and qi < ti)
   end)
 end)
