@@ -26,6 +26,10 @@ function M.mark(buf, srow, erow)
   if not empty then
     local last = erow - 1
     local text = vim.api.nvim_buf_get_lines(buf, last, last + 1, false)[1] or ""
+    -- right_gravity=true on the start so text inserted exactly at (srow, 0) —
+    -- an `O` on the first line, a paste above the region — is pushed OUT of the
+    -- range instead of being absorbed into it and read as "the target changed".
+    opts.right_gravity = true
     opts.end_row = last
     opts.end_col = #text
     opts.end_right_gravity = true

@@ -112,6 +112,80 @@ describe("shaerk.run", function()
     assert.are.same(before, out)
   end)
 
+  it("runs two requests concurrently on non-overlapping regions of one buffer", function()
+    local buf = helpers.buf({
+      "local function f()",
+      "  return 1",
+      "end",
+      "",
+      "local function g()",
+      "  return 9",
+      "end",
+    }, "lua")
+    vim.api.nvim_set_current_buf(buf)
+
+    local function slow_fake(text)
+      return {
+        name = "slow-fake",
+        cmd = function(_query, tmp)
+          return {
+            "sh",
+            "-c",
+            string.format(
+              "sleep 0.2; mkdir -p %s && cat > %s <<'SHAERK_EOF'\n%s\nSHAERK_EOF",
+              vim.fn.shellescape(vim.fs.dirname(tmp)),
+              vim.fn.shellescape(tmp),
+              text
+            ),
+          }
+        end,
+      }
+    end
+
+    local tmp_dir = vim.fn.tempname()
+    shaerk.setup({
+      provider = slow_fake(
+        '{"v":1,"status":"ok","lang":"lua"}\n\nlocal function f()\n  return 2\n  -- more\nend'
+      ),
+      tmp_dir = tmp_dir,
+    })
+    local state1, done1 = nil, false
+    vim.api.nvim_win_set_cursor(0, { 2, 0 })
+    shaerk.run({ __on_state = function(s)
+      state1, done1 = s, true
+    end })
+
+    -- Second request spawned while the first is still in flight.
+    shaerk.setup({
+      provider = slow_fake(
+        '{"v":1,"status":"ok","lang":"lua"}\n\nlocal function g()\n  return 8\nend'
+      ),
+      tmp_dir = tmp_dir,
+    })
+    local state2, done2 = nil, false
+    vim.api.nvim_win_set_cursor(0, { 6, 0 })
+    shaerk.run({ __on_state = function(s)
+      state2, done2 = s, true
+    end })
+
+    vim.wait(5000, function()
+      return done1 and done2
+    end, 20)
+
+    assert.are.equal("ok", state1)
+    assert.are.equal("ok", state2)
+    assert.are.same({
+      "local function f()",
+      "  return 2",
+      "  -- more",
+      "end",
+      "",
+      "local function g()",
+      "  return 8",
+      "end",
+    }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+  end)
+
   it("cancels an in-flight request via shaerk.cancel()", function()
     local before = { "local function f()", "  return 1", "end" }
     local buf = helpers.buf(vim.deepcopy(before), "lua")

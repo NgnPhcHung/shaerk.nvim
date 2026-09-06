@@ -47,8 +47,10 @@ function Spinner:stop()
     self.timer:close()
     self.timer = nil
   end
-  if vim.api.nvim_buf_is_valid(self.buf) then
-    pcall(vim.api.nvim_buf_clear_namespace, self.buf, ns, 0, -1)
+  -- Delete only this spinner's mark: clearing the whole namespace would wipe
+  -- the spinners of the other requests running concurrently in this buffer.
+  if self.id and vim.api.nvim_buf_is_valid(self.buf) then
+    pcall(vim.api.nvim_buf_del_extmark, self.buf, ns, self.id)
   end
   self.id = nil
 end
