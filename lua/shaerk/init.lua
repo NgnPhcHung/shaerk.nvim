@@ -23,12 +23,6 @@ local config = {
 --- @type { req: shaerk.Request|nil, anchor: shaerk.Anchor }[]
 local inflight = {}
 
--- Set while a ui.ask() prompt is open and not yet answered. vim.ui.input is
--- non-blocking under dressing.nvim/snacks.nvim/noice/fzf-lua, so one prompt at
--- a time — otherwise a second run() opens a second prompt over the first.
---- @type boolean
-local asking = false
-
 --- Remove orphaned tmp files (nvim crashed mid-request).
 --- @param dir string
 local function sweep(dir)
@@ -251,10 +245,6 @@ end
 --- @param opts { ask: boolean|nil, visual: boolean|nil, __on_state: fun(state: string)|nil }|nil
 local function go(opts)
 	opts = opts or {}
-	if asking then
-		ui.notify("finish the open prompt first", "warn")
-		return
-	end
 
 	local t = target.resolve({ visual = opts.visual })
 	if region_busy(t) then
@@ -267,14 +257,18 @@ local function go(opts)
 		return
 	end
 
-	asking = true
 	ui.ask("shaerk: ", function(input)
-		asking = false
 		if not input or vim.trim(input) == "" then
 			ui.notify("cancelled", "info")
 			if opts.__on_state then
 				opts.__on_state("cancelled")
 			end
+			return
+		end
+		-- Prompts are non-blocking under dressing/snacks/noice, so several can be
+		-- open at once: the region has to be re-checked here, not only in go().
+		if region_busy(t) then
+			ui.notify("a request is already running on this region, cancel it first", "warn")
 			return
 		end
 		local spec = t.spec ~= "" and (t.spec .. "\n\n" .. input) or input
@@ -291,8 +285,7 @@ function M.visual()
 	go({ visual = true })
 end
 
---- Cancels every in-flight request.-- ponytail: cancel-all, not cancel-the-one-under-the-cursor. Add the targeted
---- variant when running more than a couple at once actually gets confusing.
+--- Cancels every in-flight request.
 function M.cancel()
 	if #inflight == 0 then
 		ui.notify("nothing to cancel", "info")

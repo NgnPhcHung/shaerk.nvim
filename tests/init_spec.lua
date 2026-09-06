@@ -514,12 +514,12 @@ describe("shaerk.run", function()
     vim.cmd("silent! close")
   end)
 
-  -- I2: `active` is only assigned once start() actually runs, which for a
-  -- free-form spec happens inside ui.ask's callback. vim.ui.input is
-  -- non-blocking under dressing.nvim/snacks.nvim/noice/fzf-lua, so a second
-  -- run() issued before the first prompt is answered used to sail straight
-  -- past the `if active then` guard and open a second prompt.
-  it("regression: a second run() is refused while a prompt is still open (I2)", function()
+  -- I2: concurrent requests are allowed, so several prompts may be open at
+  -- once (vim.ui.input is non-blocking under dressing/snacks/noice). The guard
+  -- is on the region, not on the prompt: whichever prompt is answered first
+  -- claims the region, and answering the second one must NOT start a second
+  -- request over the same lines.
+  it("regression: only the first answered prompt claims a region (I2)", function()
     local buf = helpers.buf({ "local x = 1" }, "lua")
     vim.api.nvim_set_current_buf(buf)
     vim.api.nvim_win_set_cursor(0, { 1, 0 })
@@ -550,14 +550,15 @@ describe("shaerk.run", function()
 
     ui.ask = orig_ask
 
-    -- The real bug symptom: a second prompt opened before the first answered.
-    assert.are.equal(1, #pending)
+    assert.are.equal(2, #pending)
 
     for _, cb in ipairs(pending) do
       cb("multiply by 2")
     end
+    -- Both prompts targeted the same region; only the first one may run.
+    assert.are.equal(1, calls)
     -- Wait for the request this test actually started to finish, so it
-    -- doesn't leak a live `active` into the next test.
+    -- doesn't leak a live entry in `inflight` into the next test.
     vim.wait(2000, function()
       return done
     end, 20)
