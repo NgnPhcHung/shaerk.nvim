@@ -4,6 +4,9 @@ Generate code into **one region of one file**, using an agent CLI already on you
 
 The agent runs headless and is instructed (via the prompt and, for the default provider, a restricted tool list) to write its answer to a tmp file — this is a convention the agent follows, not a sandbox shaerk enforces. shaerk itself is the only thing that ever touches your buffer: it only ever reads the agent's answer back from that tmp file and splices it into the target region. shaerk never edits more than the one region it anchored, and never touches a file other than the buffer that region came from.
 
+## Contribute 
+Feel free to contribute
+
 ## Requirements
 
 - Neovim >= 0.10
@@ -119,3 +122,4 @@ The buffer is only ever changed on `ok`. Every other state leaves the buffer unt
 ```bash
 make test
 ```
+
