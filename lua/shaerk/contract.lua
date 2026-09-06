@@ -155,12 +155,6 @@ function M.check_syntax(buf, srow, erow, body)
   if not lang then
     return true
   end
-  -- vim.treesitter.language.add returns nil, err on failure (e.g. no parser
-  -- for lang) — it does not throw. pcall would always report success here.
-  if not vim.treesitter.language.add(lang) then
-    return true
-  end
-
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local head = vim.list_slice(lines, 1, srow)
   local tail = vim.list_slice(lines, erow + 1)
