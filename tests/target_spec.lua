@@ -1,6 +1,11 @@
 local helpers = require("tests.helpers")
 local target = require("shaerk.target")
 
+-- Neovim ships only its bundled parsers; typescript comes from nvim-treesitter,
+-- which CI does not install. Assert there when it is present, skip when it is not,
+-- rather than assert the no-parser fallback and call it a method-detection test.
+local it_typescript = vim.treesitter.language.add("typescript") == true and it or pending
+
 --- Open a buffer as current, set the cursor, return buf.
 --- @param lines string[]
 --- @param filetype string
@@ -84,7 +89,7 @@ describe("target.resolve", function()
     assert.is_true(t.needs_input)
   end)
 
-  it("selects a typescript method", function()
+  it_typescript("selects a typescript method", function()
     open({
       "class A {",
       "  run() {",
