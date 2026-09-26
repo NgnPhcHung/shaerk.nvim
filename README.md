@@ -115,13 +115,6 @@ The buffer is only ever changed on `ok`. Every other state leaves the buffer unt
 | `proc_failed` | The CLI process exited non-zero (or failed to spawn). |
 | `cancelled` | `shaerk.cancel()` was called — it cancels every in-flight request, not just one. |
 
-## Limitations
-
-- A result is refused (as `anchor_lost`) if the target region's text changed while the request was in flight — shaerk compares the region against the text it captured when the request started. This is deliberate: the agent's answer was computed against the old text, so applying it over changed text could be wrong or destructive. A free-form insertion point (no target region — `srow == erow`) has no range to diff, so shaerk instead compares a small context window captured at mark time: the line above and the line at the insertion point.
-- The syntax gate is treesitter-based, so it fails open: a filetype with no installed parser gets no syntax check at all, and `invalid_syntax` can never fire for it.
-- `shaerk.visual()` takes no options; only `shaerk.run()` accepts `{ ask }`.
-- `shaerk.cancel()` is all-or-nothing: it cancels every in-flight request, there is no way to cancel just the one under the cursor.
-- `tmp_dir` (default `./.shaerk`) is created relative to Neovim's current working directory, not relative to the target buffer's file. In a multi-project session, or if you `:cd` around, the tmp directory may not be where you expect it — pass an absolute path to `setup({ tmp_dir = ... })` if that matters to you.
 
 ## Test
 

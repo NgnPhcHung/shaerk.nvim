@@ -11,19 +11,11 @@ M.VERSION = "0.1.0"
 
 local STALE_SECONDS = 3600
 
---- @type { provider: table, fast_provider: table, tmp_dir: string }
+--- @type { provider: table, tmp_dir: string }
 local config = {
 	provider = provider.default,
-	fast_provider = provider.fast,
 	tmp_dir = "./.shaerk",
 }
-
---- Runtime switches. `fast` picks the provider, `ghost` parks a finished result
---- as ghost text instead of writing it, `suggest` arms the insert-mode entry point.
---- @type { fast: boolean, ghost: boolean, suggest: boolean }
-local state = { fast = false, ghost = false, suggest = true }
-
-M.state = state
 
 --- Every request currently in flight. Concurrent requests are allowed as long
 --- as their regions do not overlap: each one owns its own anchor (extmark), so
@@ -44,13 +36,11 @@ local function sweep(dir)
 	end
 end
 
---- @param opts { provider: table|nil, fast_provider: table|nil, tmp_dir: string|nil }|nil
+--- @param opts { provider: table|nil, tmp_dir: string|nil }|nil
 function M.setup(opts)
 	opts = opts or {}
 	config.provider = opts.provider or provider.default
 	config.tmp_dir = opts.tmp_dir or "./.shaerk"
-	config.fast_provider = opts.fast_provider or provider.fast
-	state.fast, state.ghost, state.suggest = false, false, true
 	vim.fn.mkdir(config.tmp_dir, "p")
 	sweep(config.tmp_dir)
 end
@@ -204,7 +194,7 @@ local function start(t, user_spec, on_state)
 	local original_lines = vim.api.nvim_buf_get_lines(t.buf, t.srow, t.erow, false)
 	local tmp = new_tmp()
 	local spinner = ui.spinner(anchor)
-	local prov = state.fast and config.fast_provider or config.provider
+	local prov = config.provider
 	local prov_name = prov.name
 
 	entry.req = request.start({
@@ -308,18 +298,6 @@ function M.cancel()
 			e.req:cancel()
 		end
 	end
-end
-
---- @param flag "fast"|"ghost"|"suggest"
---- @return boolean the new value, or false if the flag is unknown
-function M.toggle(flag)
-	if state[flag] == nil then
-		ui.notify("unknown toggle: " .. tostring(flag), "error")
-		return false
-	end
-	state[flag] = not state[flag]
-	ui.notify(flag .. ": " .. (state[flag] and "on" or "off"), "info")
-	return state[flag]
 end
 
 return M
